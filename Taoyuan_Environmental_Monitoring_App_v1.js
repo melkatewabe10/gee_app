@@ -2,13 +2,15 @@
 Title: Urban Thermal Environment Monitoring of Taoyuan City Using Remote Sensing Indices
 
 Description:
-A Google Earth Engine framework for analyzing urban thermal environments using
-multi-source remote sensing indices, including LST, NDVI, NDBI, SUHI, RSETI, and SWATI.
+A Google Earth Engine framework integrating LST, NDVI, NDBI, SUHI, RSETI, and SWATI
+for monitoring urban thermal conditions and environmental changes.
 
 Author: Tewabe Melkamu
 Affiliation: TIGP - Earth System Science (ESS), PhD Student
 Date Created: July 2026
+
 */
+
 // ============================================================================
 // TAOYUAN ENVIRONMENTAL MONITORING APP v1.0 · ADMIN-UNIT EDITION
 // Google Earth Engine · Code Editor (JavaScript API)
@@ -22,7 +24,7 @@ var CFG = {
   districtAssetId:'projects/ee-tewabe60/assets/Fdistrict',
   districtProp: 'TOWNENG',   // district name attribute — ADJUST if your
                              // Fdistrict shapefile uses a different field
-                             
+
   scale:         1000,       // MODIS 1 km grid
   statsScale:    1000,
   tileScale:     4,
@@ -152,21 +154,27 @@ function grayBtn(label) {
   }});
 }
 
-function makeColorBar(palInfo, mn, mx) {
+// ── HORIZONTAL colour bar (independent Colour Scale section) ─────────────────
+// Gradient runs left (min) → right (max); min/max values below the bar.
+function makeColorBar(key, mn, mx) {
+  var palInfo = PALETTES[key];
+
   var bar = ui.Thumbnail({
     image: ee.Image.pixelLonLat().select('longitude')
               .visualize({min:0, max:1, palette:palInfo.pal}),
     params:{bbox:[0,0,1,0.1], dimensions:'180x14', format:'png'},
     style:{stretch:'horizontal', margin:'2px 0px', height:'16px'}
   });
+
   var mnS = (mn!==undefined&&mn!==null) ? Number(mn).toFixed(2) : String(palInfo.min);
   var mxS = (mx!==undefined&&mx!==null) ? Number(mx).toFixed(2) : String(palInfo.max);
+
   return ui.Panel([
     bar,
-    hrow([lb(mnS, BLK,'9px'),
+    hrow([lb(mnS, BLK,'9px', true),
           ui.Label('',{stretch:'horizontal',backgroundColor:'rgba(0,0,0,0)'}),
-          lb(mxS, BLK,'9px')])
-  ], ui.Panel.Layout.flow('vertical'), {backgroundColor:'rgba(0,0,0,0)',margin:'2px 0px'});
+          lb(mxS, BLK,'9px', true)])
+  ], ui.Panel.Layout.flow('vertical'), {backgroundColor:'rgba(0,0,0,0)', margin:'2px 0px'});
 }
 
 // ============================================================================
@@ -500,7 +508,7 @@ var leftPanel = ui.Panel(
 );
 
 // ============================================================================
-// SECTION 12 — RIGHT PANEL (Description + Colour Bar)
+// SECTION 12 — RIGHT PANEL (Description + independent Colour Scale section)
 // ============================================================================
 var descTitle  = lb('—', AC,'12px',true);
 var descBody   = lb('Click a checkbox to see index details.', T2,'10px');
@@ -508,19 +516,41 @@ var descFLbl   = lb('Formula:', T2,'10px',true);
 var descForm   = lb('—', T1,'10px');
 var descRLbl   = lb('Reference:', T2,'10px',true);
 var descRef    = lb('—', T2,'10px');
-var descCBSlot = ui.Panel([],ui.Panel.Layout.flow('vertical'),
-  {backgroundColor:'rgba(0,0,0,0)',margin:'4px 0px'});
 
 var descCard = card([sh('SELECTED INDEX'),
-  descTitle, descBody, descFLbl, descForm, descRLbl, descRef,
-  lb('Colour Scale:',BLK,'10px',true), descCBSlot]);
+  descTitle, descBody, descFLbl, descForm, descRLbl, descRef]);
+
+// ── Independent COLOUR SCALE section (lower-right area) ─────────────────────
+// Vertical gradient bar; max/min values on the left; the index label
+// (LST (°C), SUHI (°C), others unitless) vertically oriented on the right.
+var csIdxLbl = lb('—', T2,'9px');
+var csSlot   = ui.Panel([], ui.Panel.Layout.flow('vertical'),
+  {backgroundColor:'rgba(0,0,0,0)', margin:'2px 0px'});
+var colorScaleCard = card([sh('🎨  Colour Scale'), csIdxLbl, csSlot]);
+
+// ── Contact section (below the Colour Scale panel) ──────────────────────────
+var contactCard = card([sh('✉  Contact'),
+  lb('Prof. Yuei-An Liou', T1,'10px', true),
+  lb('Center for Space and Remote Sensing Research (CSRSR)', T2,'10px'),
+  lb('National Central University', T2,'10px'),
+  lb('No. 300, Zhongda Road, Zhongli District, Taoyuan City 320317, Taiwan (R.O.C.)', T2,'10px'),
+  lb('Email: fl1624@csrsr.ncu.edu.tw', AC,'10px')
+]);
+
+// ── About section (lower-right corner) ──────────────────────────────────────
+var aboutCard = card([sh('ℹ  About'),
+  lb('Urban Thermal Environment Monitoring App', T1,'10px', true),
+  lb('Powered by Google Earth Engine', T2,'10px'),
+  lb('Version: v1.0 (Sep 2026)', T2,'10px')
+]);
 
 function updateDescPanel(key, mn, mx) {
   var info=INFO[key]; var pal=PALETTES[key];
   if(!info||!pal) return;
   descTitle.setValue(pal.label); descBody.setValue(info.desc);
   descForm.setValue(info.formula); descRef.setValue(info.ref);
-  descCBSlot.clear(); descCBSlot.add(makeColorBar(pal,mn,mx));
+  csIdxLbl.setValue(pal.label);
+  csSlot.clear(); csSlot.add(makeColorBar(key,mn,mx));
 }
 function wireCheck(ck,key){ ck.onChange(function(v){ if(v) updateDescPanel(key); }); }
 wireCheck(ckLST,'LST'); wireCheck(ckSUHI,'SUHI'); wireCheck(ckNDVI,'NDVI');
@@ -533,7 +563,7 @@ rightWidth.onSlide(function(v){ rightPanel.style().set('width', v+'px'); });
 var rightWidthCard = card([sh('↔  Panel Width'), rightWidth]);
 
 var rightInner = ui.Panel(
-  [descCard, rightWidthCard],
+  [descCard, colorScaleCard, contactCard, rightWidthCard, aboutCard],
   ui.Panel.Layout.flow('vertical'), {padding:'6px', backgroundColor:GR}
 );
 var rightPanel = ui.Panel(
@@ -577,11 +607,7 @@ var pPointTable = ui.Panel(
   {backgroundColor:GR, margin:'2px 0px'}
 );
 
-// ── Export buttons + download-link slot (bottom of centre panel) ─────────────
-var btnExMap  = ui.Button({label:'Export Map (GeoTIFF)', style:{
-  color:BLK, backgroundColor:W, fontSize:'11px', fontWeight:'bold',
-  padding:'6px 10px', margin:'3px 0px', stretch:'horizontal', border:'1px solid '+BD
-}});
+// ── Export button + download-link slot (bottom of centre panel) ──────────────
 var btnExData = ui.Button({label:'Export Time Series (CSV)', style:{
   color:BLK, backgroundColor:W, fontSize:'11px', fontWeight:'bold',
   padding:'6px 10px', margin:'3px 0px', stretch:'horizontal', border:'1px solid '+BD
@@ -589,7 +615,7 @@ var btnExData = ui.Button({label:'Export Time Series (CSV)', style:{
 var exportLinkSlot = ui.Panel([], ui.Panel.Layout.flow('vertical'),
   {backgroundColor:'rgba(0,0,0,0)', margin:'2px 0px'});
 var exportCard = card([sh('💾  Export (download links)'),
-  hrow([btnExMap, btnExData]), exportLinkSlot]);
+  btnExData, exportLinkSlot]);
 
 var inspectorPanel = ui.Panel(
   [phead('STATISTICS: TIME SERIES ANALYSIS RESULT'),
@@ -746,7 +772,7 @@ var _villageName          = null;  // JS string (VILLENG)
 var _villageHL            = null;  // highlight ui.Map.Layer
 var _villageAnnualFeatures = null; // raw [{year,nImages,LST,…}] for CSV export
 
-// ── Server-side: annual composite stack → MEAN over the village polygon ──────
+// ── Server-side: annual composite stack → MEDIAN over the village polygon ────
 // Only the SELECTED indices are computed (see computeIndexStackForKeys).
 function buildVillageAnnualStatsFC(villageGeom, aoi, sy, ey, season, keys) {
   var years = ee.List.sequence(parseInt(sy,10), parseInt(ey,10));
@@ -1106,29 +1132,6 @@ function showDownloadLink(text, url){
   }, url));
 }
 
-btnExMap.onClick(function(){
-  if(!_lstImg||!_aoi){ setStatus('⚠ Run APPLY ANALYSIS first',RD); return; }
-  setStatus('⏳ Preparing GeoTIFF download link …', AM);
-  exportLinkSlot.clear();
-  exportLinkSlot.add(lb('⏳ Generating link …', T2,'10px'));
-  _lstImg.getDownloadURL({
-    name:  'Taoyuan_MODIS_LST_'+selStart.getValue()+'_'+selEnd.getValue(),
-    scale: CFG.scale,
-    region:_aoi,
-    crs:   'EPSG:4326',
-    format:'GEO_TIFF',
-    filePerBand:false
-  }, function(url, err){
-    if(err || !url){
-      exportLinkSlot.clear();
-      exportLinkSlot.add(lb('⚠ Download failed: '+(err||'unknown error'), RD,'10px'));
-      setStatus('⚠ Map export failed', RD); return;
-    }
-    showDownloadLink('⬇  Download LST GeoTIFF', url);
-    setStatus('✓ GeoTIFF link ready below', GN);
-  });
-});
-
 btnExData.onClick(function(){
   if(!_villageAnnualFeatures || !_villageAnnualFeatures.length){
     setStatus('⚠ Run DATA EXTRACT first',RD); return;
@@ -1187,6 +1190,11 @@ btnExData.onClick(function(){
 //   EXPORT: "Export Time Series (CSV)" downloads the raw annual values
 //   (year + the checked indices + unit name) via a direct link.
 //
+// COLOUR SCALE (right panel): independent section below the index
+// description. The bar is HORIZONTAL (min on the left, max on the right,
+// values below the bar). It always reflects the most recently drawn /
+// selected index and its 2–98 percentile stretch after APPLY ANALYSIS.
+//
 // ============================================================================
 // APP-PUBLISHING NOTES — fixing "there was an error loading some parts
 // of the map" in the published app:
@@ -1203,10 +1211,8 @@ btnExData.onClick(function(){
 //    client-side try/catch can never catch a server-side permission error;
 //    it only made the failure look like a random map-tile error.
 // 3. Export.image / Export.table tasks do NOT run inside published apps
-//    (there is no Tasks tab for app users). Both export buttons now use
-//    getDownloadURL links instead, which work in the Editor AND the app.
-//    Direct downloads are capped (~50 MB / 32 MB request); the 1 km MODIS
-//    LST grid over Taoyuan is far below that limit.
+//    (there is no Tasks tab for app users). The export button uses a
+//    getDownloadURL link instead, which works in the Editor AND the app.
 // 4. If tiles still time out on very long date ranges, shorten the range or
 //    raise CFG.tileScale (e.g. 8) — apps have the same per-tile compute
 //    limits as the Editor, but no retry-on-demand.
