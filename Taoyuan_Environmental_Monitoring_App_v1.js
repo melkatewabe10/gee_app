@@ -13,65 +13,7 @@ TIGP - Earth System Science (ESS), PhD Student
 // TAOYUAN ENVIRONMENTAL MONITORING APP v1.0 · ADMIN-UNIT EDITION
 // Google Earth Engine · Code Editor (JavaScript API)
 // ============================================================================
-// v8.x: see Taoyuan_Environmental_Monitoring_App_v8.9.js for full log.
-// ============================================================================
-// v9.2 CHANGES (vs v9.1):
-//  44. ANALYSIS UNIT selector added to the Control Panel: VILLAGE (default,
-//      'projects/ee-tewabe60/assets/Village_name', attribute VILLENG) or
-//      DISTRICT ('projects/ee-tewabe60/assets/Fdistrict'). Choropleth maps,
-//      click-to-inspect, time-series extraction, and exports all follow the
-//      selected unit.
-//  45. The BOUNDARY of the selected analysis unit is drawn on the map
-//      immediately when the unit is chosen (before APPLY ANALYSIS), and the
-//      clicked village/district is highlighted in yellow.
-//  46. Inspector instructions updated: 1) Click a admin in the map
-//      2) Check indices  3) Set date range  4) Click DATA EXTRACT.
-//  47. Description & Reference panel rewritten with the full index
-//      documentation (LST / SUHI / NDVI / NDBI / RSETI / SWATI) including
-//      updated references (Rao 1972; Rouse et al. 1974; Zha et al. 2003;
-//      Liou et al. 2019; Liou & Thai 2025; Liou et al. 2023).
-//  48. Panel titles updated: map = 'MAP — TAOYUAN CITY THERMAL ENVIRONMENTAL
-//      MONITORING'; statistics = 'STATISTICS: TIME SERIES ANALYSIS RESULT'.
-//      Stats captions simplified; export section renamed
-//      'Export (download links)' with buttons 'Export Map (GeoTIFF)' and
-//      'Export Time Series (CSV)'.
-// ============================================================================
-// v9.1 CHANGES (vs v9.0):
-//  43. Village reduction switched from MEAN to MEDIAN everywhere:
-//      • choropleth maps (reduceRegions with ee.Reducer.median()),
-//      • annual time-series extraction (reduceRegion with median),
-//      • all labels / captions updated accordingly.
-//      The median is more robust to residual cloud-contaminated or edge
-//      pixels inside a village polygon. NOTE: the "Mean" column in the
-//      SUMMARY table is unchanged — that is the TEMPORAL mean of the annual
-//      village-median values across years, a different statistic.
-// ============================================================================
-// v9.0 CHANGES (vs v8.9):
-//  37. Boundary asset switched from Fdistrict to the VILLAGE shapefile
-//      'projects/ee-tewabe60/assets/Village_name' (name attribute: VILLENG).
-//  38. APPLY ANALYSIS now reduces every index to its MEDIAN PER VILLAGE
-//      (one reduceRegions over the 6-band stack) and displays VILLAGE-LEVEL
-//      CHOROPLETH maps (each village painted by its median value; colour
-//      stretch = 2–98 percentile across the village medians).
-//  39. Pixel Inspector replaced by a VILLAGE INSPECTOR: click any village →
-//      the app identifies it via VILLENG, highlights it, and EXTRACT builds
-//      the YEAR-BY-YEAR annual seasonal mean series of that whole village
-//      for every checked index (same |Z|≤3 temporal outlier filter, same
-//      Google-Charts linear trendline with R²).
-//  40. Summary table now reports Median / Mean / Max / Min / StdDev / Count
-//      per index for the clicked village over the full selected range.
-//  41. APP-SAFE EXPORTS: Export.image / Export.table tasks CANNOT be started
-//      from a published EE App (Tasks only exist in the Code Editor). Both
-//      export buttons now generate direct DOWNLOAD LINKS via getDownloadURL,
-//      which work both in the Code Editor and in the published app.
-//  42. Removed the silent try/catch fallback rectangle around the asset —
-//      client-side try/catch never catches server-side permission errors,
-//      it only hid the real problem ("error loading some parts of the map").
-//      See the APP-PUBLISHING NOTES at the bottom: the fix is to SHARE the
-//      asset with the app (or make it public).
-// ============================================================================
 
-// ============================================================================
 // SECTION 1 — CONFIGURATION
 // ============================================================================
 var CFG = {
@@ -80,12 +22,11 @@ var CFG = {
   districtAssetId:'projects/ee-tewabe60/assets/Fdistrict',
   districtProp: 'TOWNENG',   // district name attribute — ADJUST if your
                              // Fdistrict shapefile uses a different field
-                             // (a fallback auto-detects the first text field)
+                             
   scale:         1000,       // MODIS 1 km grid
   statsScale:    1000,
   tileScale:     4,
-  nSamples:      400,        // random pixel sample size for spatial Z-masks /
-                             // normalization inside index functions (RSETI/SWATI)
+  nSamples:      400,        // random pixel sample size for spatial Z-masks 
   sampleSeed:    0,
   yearChunkSize: 2,          // years per server request in village extraction
                              // (kept small — each year builds a full index
@@ -572,7 +513,7 @@ var descCBSlot = ui.Panel([],ui.Panel.Layout.flow('vertical'),
 
 var descCard = card([sh('SELECTED INDEX'),
   descTitle, descBody, descFLbl, descForm, descRLbl, descRef,
-  lb('Colour Scale (2–98 pctile of village medians):',BLK,'10px',true), descCBSlot]);
+  lb('Colour Scale:',BLK,'10px',true), descCBSlot]);
 
 function updateDescPanel(key, mn, mx) {
   var info=INFO[key]; var pal=PALETTES[key];
@@ -616,7 +557,7 @@ mapHeightSlider.onSlide(function(v){ MAP.style().set('height', v+'px'); });
 var mapResizeCard = card([sh('↕  Map Height'), mapHeightSlider]);
 
 // ── Admin Inspector output panels ───────────────────────────────────────────
-var INIT_CHART_MSG   = '🏘 Click a village/district on the map and press  ▶ DATA EXTRACT  to generate one chart per selected index (annual seasonal MEDIAN of the unit · |Z|≤' + CFG.Z_THRESH + ' filtered).';
+var INIT_CHART_MSG   = '🏘 Click a village/district on the map and press  ▶ DATA EXTRACT  to generate one chart per selected index.';
 var INIT_YEARTBL_MSG = '🏘 Annual values table (Year vs median value, one row per year of the selected range) will appear here after extraction.';
 var INIT_TABLE_MSG   = '🏘 Summary statistics (Median / Mean / Max / Min / StdDev / Count) will appear here after extraction.';
 
@@ -1224,7 +1165,7 @@ btnExData.onClick(function(){
 // APPLY ANALYSIS: loads QC-masked MOD11A1 + MOD09GA over the FULL date range,
 // builds the six-index seasonal median stack, reduces every index to its
 // MEDIAN PER ADMIN UNIT (village or district — one reduceRegions call), and
-// displays six choropleth layers (2–98 percentile stretch across unit medians).
+// displays six choropleth layers.
 //
 // ADMIN INSPECTOR:
 //   1) Click a admin in the map → the app looks up its name (VILLENG for
@@ -1233,16 +1174,14 @@ btnExData.onClick(function(){
 //   For each year with ≥1 QC-valid MODIS image, the same annual seasonal
 //   median composite used for the maps is reduced to the MEDIAN over the
 //   clicked village/district polygon. Each series is
-//   passed through the temporal |Z| ≤ 3 outlier filter before charting.
-//   The series ALWAYS spans the full selected range: e.g. 2016–2025 → one
+////   The series ALWAYS spans the full selected range: e.g. 2016–2025 → one
 //   annual median per year = 10 values (years with zero valid MODIS data show
 //   '—' in the table and are simply absent from the charts).
 //   OUTPUT (three blocks, in order):
 //     a) One line chart per index — Year vs annual seasonal village median,
 //        linear trendline with R².
 //     b) ANNUAL VALUES TABLE — Year vs median value, one row per year of the
-//        selected range, one column per checked index. '*' marks |Z|>3
-//        outlier years (excluded from charts/summary but still listed).
+//        selected range, one column per checked index.
 //     c) Summary table — Median / Mean / Max / Min / StdDev / Count of valid
 //        non-outlier years, per index.
 //   EXPORT: "Export Time Series (CSV)" downloads the raw annual values
@@ -1311,5 +1250,5 @@ btnReset.onClick(resetAll);
 showUnitBoundary();
 
 // ============================================================================
-// END — TAOYUAN ENVIRONMENTAL MONITORING APP v9.2 (ADMIN-UNIT EDITION)
+// END — TAOYUAN ENVIRONMENTAL MONITORING APP v1.0 (ADMIN-UNIT EDITION)
 // ============================================================================
