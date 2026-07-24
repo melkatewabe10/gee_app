@@ -1,4 +1,4 @@
-Quick Guide — Taoyuan City Thermal Environmental Monitoring App
+Quick Guide 
 
 A Google Earth Engine app for monitoring urban thermal conditions in Taoyuan City using six MODIS-based indices: LST, SUHI, NDVI, NDBI, RSETI, SWATI (2001–present).
 
@@ -11,7 +11,7 @@ Click ▶ APPLY ANALYSIS. Each index is shown as a choropleth map, where every v
 2. Extract a time series
 Click an admin in the map — the village/district is identified by name and highlighted in yellow.
 Check indices to include.
-Set date range (e.g. 2016–2025 gives 10 annual values).
+Set the date range (e.g., 2016–2025 yields 10 annual values).
 Click ▶ DATA EXTRACT.
 
 The STATISTICS: TIME SERIES ANALYSIS RESULT section then shows, for the selected unit: one trend chart per index (annual seasonal median, linear trendline), an annual values table, and a summary table (Median, Mean, Max, Min, StdDev, Count).
@@ -23,7 +23,7 @@ At the bottom of the statistics section:
 Export Map (GeoTIFF) — download link for the LST composite map.
 Export Time Series (CSV) — download link for the annual values of the selected village/district.
 Tips
-The Description & Reference panel (right side) shows the formula, reference, and colour scale of each index — click an index checkbox to update it.
+The Description & Reference panel (on the right) shows the formula, reference, and colour scale for each index — click an index checkbox to update it.
 If some years fail on long date ranges, click DATA EXTRACT again (retries usually succeed) or uncheck RSETI/SWATI, the heaviest indices.
 ✕ Clear Selection removes the selected unit; ↺ Reset restores all defaults.
 
