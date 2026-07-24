@@ -2,13 +2,13 @@
 Title: Urban Thermal Environment Monitoring of Taoyuan City Using Remote Sensing Indices
 
 Description:
-A Google Earth Engine framework integrating LST, NDVI, NDBI, SUHI, RSETI, and SWATI
-for monitoring urban thermal conditions and environmental changes.
+A Google Earth Engine framework for analyzing urban thermal environments using
+multi-source remote sensing indices, including LST, NDVI, NDBI, SUHI, RSETI, and SWATI.
 
 Author: Tewabe Melkamu
-TIGP - Earth System Science (ESS), PhD Student
+Affiliation: TIGP - Earth System Science (ESS), PhD Student
+Date Created: July 2026
 */
-
 // ============================================================================
 // TAOYUAN ENVIRONMENTAL MONITORING APP v1.0 · ADMIN-UNIT EDITION
 // Google Earth Engine · Code Editor (JavaScript API)
